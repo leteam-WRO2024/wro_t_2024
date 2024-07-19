@@ -19,15 +19,15 @@ class mctrl():
         # self.pid = pidc(0.6, 0.038, 0.034, True)
         self.pid = pidc(0.9, 0, 0.02, True)
 
-        self.distance_threshold = 28
+        self.distance_threshold = 25
         self.debug = debug
 
         self.__speed = speed
         self.__direction = 0
 
-        self.min_angle = 40
+        self.min_angle = 50
         self.max_angle = 150
-        self.mid_angle = 100
+        self.mid_angle = 110
         
         self.turns = 0
 
@@ -81,41 +81,11 @@ class mctrl():
 
     def adjust_angle(self, heading: Union[int, float], reading: Union[int, float], right_distance: Union[int, float], left_distance: Union[int, float]):
 
-        distance_error = 0
-
-        if left_distance < 82 and right_distance < 82:
-            if self.direction == -1:
-                distance_error = self.distance_threshold - left_distance
-            elif self.direction == 1:
-                distance_error = right_distance - self.distance_threshold
-            else:            
-                if 0 < right_distance < self.distance_threshold:
-                    distance_error = right_distance - 25
-                elif 0 < left_distance < self.distance_threshold:
-                    distance_error = 25 - left_distance
-
-        # if right_distance < 82 and left_distance < 82:
-        #     if self.direction == -1:
-        #         distance_error = self.distance_threshold - left_distance
-        #     elif self.direction == 1:
-        #         distance_error = right_distance - self.distance_threshold
-        #     else:
-        #         distance_error = right_distance - left_distance
-
-        # distance_error = self.pid.calc_pid(distance_error)
-        # print(distance_error)
-        # Other ideas
-        # add the distance error to the error_val before doing the -180 - 180 degrees mapping
+        distance_error = self.distance_threshold - left_distance
+    
         error_val = reading - heading + distance_error
         error_val = ((error_val + 180) % 360) - 180
-        error_val = (error_val + self.mid_angle)
-        # print(error_val, distance_error)
-
-        # Other ideas
-        # - error_val += 85 + distance_error
-        # + self.angle = error_val + distance_error
-        # needs the servo angle to be reset to 90 degrees continuously
-        self.angle = error_val
+        self.angle = (error_val + self.mid_angle)
 
     def direction_turn(self):
         if self.direction == -1:
@@ -161,10 +131,10 @@ class mctrl():
     def turn_right(self):
         self.angle = self.max_angle
 
-    def move_forward(self, nspeed: Union[int, None] = None):
+    def move_forward(self, nspeed: Union[int, float]  = 0):
         self.motor.forward(nspeed if nspeed else self.speed)
 
-    def move_backward(self, nspeed: Union[int, None] = None):
+    def move_backward(self, nspeed: Union[int, float] = 0):
         self.motor.backward(nspeed if nspeed else self.speed)
 
     def stop_car(self):

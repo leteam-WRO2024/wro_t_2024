@@ -5,14 +5,14 @@ from threading import Thread
 from imutils.video import FPS
 from queue import Queue
 from time import sleep
-
+from global_vals import *
 
 # ColorsCoordinations(resolution=(320, 240), framerate=32,awb_mode="auto", brightness=60)
 COLOR_RANGES = {
     "green":    (np.array([40, 40, 20], np.uint8), np.array([95, 255, 205], np.uint8)),
-    "red":      (np.array([0, 51, 64], np.uint8), np.array([180, 255, 255], np.uint8)),
+    "red":      (np.array([160, 110, 60], np.uint8), np.array([1757, 255, 255], np.uint8)),
     "orange":   (np.array([0, 30, 50], np.uint8), np.array([24, 255, 255], np.uint8)),
-    "blue":     (np.array([92, 60, 107], np.uint8), np.array([124, 255, 255], np.uint8))
+    "blue":     (np.array([100, 70, 51], np.uint8), np.array([130, 255, 255], np.uint8))
 }
 
 
@@ -20,11 +20,11 @@ class ColorsCoordinations:
     def __init__(self):
 
         self.stream = cv2.VideoCapture(0)
-        self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-        self.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, 768)
+        self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
+        self.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
 
-        self.crop_height = 125
-        self.crop_width = 70
+        self.crop_height = CROP_HEIGHT
+        self.crop_width = CROP_WIDTH
 
         self.frame = None
         self.__stop = False
@@ -72,11 +72,13 @@ class ColorsCoordinations:
             if self.stop:
                 break
             
+            sleep(0.000002)
+            
     def get_centroid(self, contours):
         if len(contours) != 0:
             max_contour = max(contours, key=cv2.contourArea)
             if not cv2.contourArea(max_contour) > 1000:
-                return (0, 0, 0, 0, 0, 0)
+                return (-1, -1, -1, -1, -1, -1)
 
             x, y, w, h = cv2.boundingRect(max_contour)
 
@@ -86,7 +88,7 @@ class ColorsCoordinations:
 
             return (center_x, center_y, x, y, w, h)
         
-        return (0, 0, 0, 0, 0, 0)
+        return (-1, -1, -1, -1, -1, -1)
 
             # cent_queue.appendleft(center)
 
@@ -123,8 +125,7 @@ class ColorsCoordinations:
 
         imageFrame = cv2.GaussianBlur(imageFrame, (1, 1), 0)
         mask = self.__segment_frame(imageFrame, lower, upper)
-        cv2.imshow("mask", mask)
-        cv2.waitKey(1)
+
         contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
         return self.get_centroid(contours=contours)

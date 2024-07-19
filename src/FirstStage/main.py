@@ -88,9 +88,9 @@ def moveUntilDist():
 
     motors.minfo(f"\n\nFRONT:: {frontDist}\n\n")
     while (frontDist > 75 or frontDist == 0):
-        if frontDist < 100 and motors.speed > 0.6:
-            motors.speed = 0.78
-            motors.move_forward()
+        # if frontDist < 100 and motors.speed > 0.6:
+        #     motors.speed = 0.78
+        #     motors.move_forward()
 
             # print(f"Moving with speed {motors.speed}  --- front {frontDist}")
             
@@ -132,10 +132,6 @@ def turn():
 def main():
     global new_J
 
-    motors.max_angle = 120
-    motors.min_angle = 40
-    motors.mid_angle = 80
-    motors.speed = 0.6
     motors.turn_forward()
 
     color_event = Event()
@@ -151,15 +147,12 @@ def main():
     while not btn.is_active:
         sleep(0.1)
 
-    sleep(1)
-    
     while motors.turns < 3:
         moveUntilDist()
-        sleep(0.1)
+        sleep(0.05)
         turn()
         motors.get_current_turn(mpu.currentAngle)
         sleep(0.1)
-        # print(f"\nnew_j = {new_J}\n")
         print(f"Turns: {motors.turns}")
         new_J = new_J + 1
     

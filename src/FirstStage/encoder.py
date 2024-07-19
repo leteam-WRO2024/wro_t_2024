@@ -57,7 +57,7 @@ class Encoder:
 
 
 if __name__ == "__main__":
-    enc = Encoder(21)
+    enc = Encoder(15)
     while True:
         print(enc.evalues)
         sleep(1)
