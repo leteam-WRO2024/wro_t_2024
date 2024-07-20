@@ -23,9 +23,6 @@ class ColorsCoordinations:
         self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
         self.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
 
-        self.crop_height = CROP_HEIGHT
-        self.crop_width = CROP_WIDTH
-
         self.frame = None
         self.__stop = False
 
@@ -39,15 +36,15 @@ class ColorsCoordinations:
     def stop(self, val: bool):
         self.__stop = val
 
-    def __cropped_frame(self, iFrame):
+    def __cropped_frame(self, iFrame, crop_width = CROP_WIDTH, crop_height = CROP_HEIGHT):
         height, width, _ = iFrame.shape
-        right_crop = width - self.crop_width
-        top_crop = iFrame[self.crop_height: height, :]
-        return top_crop[:, self.crop_width: top_crop.shape[1] - self.crop_width]
+        right_crop = width - crop_width
+        top_crop = iFrame[crop_height: height, :]
+        return top_crop[:, crop_width: top_crop.shape[1] - crop_width]
 
-    def __crop_top(self, iFrame):
+    def __crop_top(self, iFrame, crop_height = CROP_HEIGHT):
         height, width, _ = iFrame.shape
-        return iFrame[self.crop_height: height, :]
+        return iFrame[crop_height: height, :]
 
     def __segment_frame(self, frame, lower: np.ndarray, upper: np.ndarray):
         kernel = np.ones((5, 5), "uint8")
@@ -77,7 +74,7 @@ class ColorsCoordinations:
     def get_centroid(self, contours):
         if len(contours) != 0:
             max_contour = max(contours, key=cv2.contourArea)
-            if not cv2.contourArea(max_contour) > 1000:
+            if not cv2.contourArea(max_contour) > 350:
                 return (-1, -1, -1, -1, -1, -1)
 
             x, y, w, h = cv2.boundingRect(max_contour)
@@ -92,6 +89,11 @@ class ColorsCoordinations:
 
             # cent_queue.appendleft(center)
 
+    def crop(self, frame, width, height):
+        # rframe = self.__crop_top(frame)
+        rframe = self.__cropped_frame(frame, width, height)
+        return rframe
+    
     def get_color_ranges(self, color: str):
         if color not in list(COLOR_RANGES.keys()):
             print(
@@ -121,7 +123,8 @@ class ColorsCoordinations:
     def get_red_green(self, lower: np.ndarray, upper: np.ndarray):
         imageFrame = self.read()
 
-        imageFrame = self.__crop_top(imageFrame)
+        # imageFrame = self.__crop_top(imageFrame)
+        imageFrame = self.__cropped_frame(imageFrame, 90, 130)
 
         imageFrame = cv2.GaussianBlur(imageFrame, (1, 1), 0)
         mask = self.__segment_frame(imageFrame, lower, upper)
@@ -145,7 +148,15 @@ if __name__ == "__main__":
     sleep(2)
 
     while True:
-        x = image.detect_color("green")
-        print(x)
+        frame = image.read()
+        croped_og = image.crop(frame, CROP_WIDTH, CROP_HEIGHT)
+        croped = image.crop(frame, 90, 130)
+        if frame is not None:
+            x = image.detect_color("green")
+            cv2.imshow("Frame", croped_og)
+            cv2.imshow("cropped", croped)
+            
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
     cv2.destroyAllWindows()
     image.stop = True

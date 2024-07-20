@@ -4,12 +4,14 @@ from typing import Union, NewType
 from time import sleep, time
 from pid_ctrl import pidc
 from global_vals import *
+from numpy import exp
 
 
 class mctrl():
     def __init__(self, motorPins: list, servoPin: int, speed: int = 1, debug: bool = False) -> None:
         self.motorPins: list = motorPins
         self.servoPin: int = servoPin
+        self.debug = debug
 
         # OLD pidc vals: 0.6, 0.0, 0.3 True
         self.motor: Motor = Motor(*self.motorPins)
@@ -19,9 +21,9 @@ class mctrl():
 
         # 0.8789 0.04 0.048
         # self.pid = pidc(0.6, 0.038, 0.034, True)
-        self.pid = pidc(0.9, 0, 0.02, True)
+
         #-> old setpoint = 130
-        self.color_pidc = pidc(0.29, 0.001, 0.17, 150, 50, True) 
+        self.color_pidc = pidc(0.14, 0, 0.0005, 80, 70, False) 
         # self.color_pidc = pidc(0.1, 0, 0.1, 150, 40, True)
         
         self.turns = 0
@@ -32,6 +34,7 @@ class mctrl():
         self.min_angle = 50
         self.max_angle = 150
         self.mid_angle = 110
+        
         
         self.total_weight = 0
 
@@ -65,6 +68,14 @@ class mctrl():
     def minfo(self, val):
         if self.debug:
             print(val)
+    
+    def smooth_transition(self, current_angle, target_angle, step=3):
+
+        if current_angle < target_angle:
+            return min(current_angle + step, target_angle)
+        elif current_angle > target_angle:
+            return max(current_angle - step, target_angle)
+        return current_angle
 
     def get_next_angle(self, angle: Union[int, float], ninety_deg: bool = False):
         next_angle = ((angle + 10) + (self.direction * 90)) % 360
@@ -86,30 +97,38 @@ class mctrl():
     def calculate_weighted_error(self, color, weight_sign):
         error = 0
         center_x_obj, _, _, _, w, h = color
+        if center_x_obj == -1:
+            return 0
 
-        if center_x_obj != -1:
-            weight = w * h
-            error += weight_sign * (center_x_obj - FRAME_CENTER) * weight
-            self.total_weight += weight
-        else:
-            self.total_weight = 0
         
-        if self.total_weight != 0:
-            error /= self.total_weight
+        weight = w * h
+        center_away = abs(center_x_obj - FRAME_CENTER) / FRAME_WIDTH
+        error += weight_sign * (center_x_obj - FRAME_CENTER) * (1 - (center_away ** 2)) * weight
+        self.total_weight += weight
+     
+        # if self.total_weight != 0:
+        #     error /= self.total_weight
 
-        error /= FRAME_WIDTH
-        error = self.pid.calc_pid(error)
+        error /= (FRAME_WIDTH * 1.37)
+        # print(f"Error before pidc: {error}")
+        error = self.color_pidc.calc_pid(error)
+        # print(error)
         return error
 
-    def color_based_adjustment(self, heading: Union[float, int], reading: Union[float, int], color, weight_sign, left_dist):
+    def color_based_adjustment(self, heading: Union[float, int], reading: Union[float, int], color, weight_sign, left_dist, right_dist):
         error = self.calculate_weighted_error(color, weight_sign)     
-
+        
         angle_error = reading - heading
         if left_dist < 15:
             angle_error += 20
+        elif right_dist < 15:
+            angle_error -= 20
+        
         angle_error = ((angle_error + 180) % 360) - 180
-        self.angle = (angle_error + self.mid_angle) + error
-
+        angle_error = (angle_error + self.mid_angle) + error
+        self.angle = angle_error
+        # self.angle = self.smooth_transition(self.angle, angle_error)
+        
     def direction_turn(self):
         if self.direction == -1:
             self.turn_right()

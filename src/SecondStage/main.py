@@ -73,8 +73,6 @@ def starting_point_adjustment():
     motors.turn_forward()
 
 
-
-
 def moveUntilDist():
     heading = motors.get_heading_angle(mpu.currentAngle)
 
@@ -83,20 +81,20 @@ def moveUntilDist():
     motors.minfo(f"\n\nFRONT:: {frontDist}\n\n")
     while True:
         if green_center[2] != -1:
-            motors.color_based_adjustment(heading, mpu.currentAngle, green_center, 1, leftDist)
+            motors.color_based_adjustment(heading, mpu.currentAngle, green_center, 1, leftDist, rightDist)
         elif red_center[2] != -1:
-            motors.color_based_adjustment(heading, mpu.currentAngle, red_center, -1, leftDist)
+            motors.color_based_adjustment(heading, mpu.currentAngle, red_center, -1, leftDist, rightDist)
             motors.minfo(
                 f"\nFRONT:: {frontDist}\nRIGHT:: {rightDist}\nLEFT:: {leftDist}\n")
         else:
-            if (frontDist > 75 or frontDist == 0) or (rightDist < 100 and leftDist < 100):
-                motors.color_based_adjustment(heading, mpu.currentAngle, green_center, 0, leftDist)
+            if (frontDist > 80 or frontDist == 0) or (rightDist < 100 and leftDist < 100):
+                motors.color_based_adjustment(heading, mpu.currentAngle, green_center, 0, leftDist, rightDist)
             else:
                 break
         
     motors.turn_forward()
     motors.stop_car()
-    motors.speed = 0.8
+    motors.speed = 1
     print("OUT OF LOOP")
 
 
@@ -106,7 +104,7 @@ def turn():
     mpu.nextAngle = motors.get_next_angle(heading, True)
     motors.direction_turn()
     sleep(0.003)
-    motors.move_forward(0.8)
+    motors.move_forward(1)
 
     mpu.dinfo(
         f"ABOVE:: ({mpu.currentAngle} - {mpu.nextAngle}) * {motors.direction} = {(mpu.nextAngle - mpu.currentAngle) * motors.direction}")
@@ -130,10 +128,10 @@ def turn():
 def main():
     global new_J
 
-    motors.max_angle = 120
-    motors.min_angle = 40
-    motors.mid_angle = 80
-    motors.speed = 0.7
+    motors.max_angle = 150
+    motors.min_angle = 50
+    motors.mid_angle = 110
+    motors.speed = 1
     motors.turn_forward()
 
     color_event = Event()
@@ -147,8 +145,8 @@ def main():
     sleep(1)
     Thread(target=get_color, args=(color_event, )).start()
 
-    while not btn.is_active:
-        sleep(0.1)
+    # while not btn.is_active:
+    #     sleep(0.1)
 
     while motors.turns < 3:
         moveUntilDist()
@@ -156,6 +154,9 @@ def main():
         motors.get_current_turn(mpu.currentAngle)
         sleep(0.1)
         new_J = new_J + 1
+
+    # while True:
+    #     motors.color_based_adjustment(0, 0, red_center, -1, leftDist, rightDist)
 
     print("Finishing")
     starting_point_adjustment()
