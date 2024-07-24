@@ -27,7 +27,7 @@ def read_distance(event: Event):
         if ser.in_waiting > 0:
             frontDist, rightDist, leftDist = list(
                 map(float, ser.readline().decode("utf-8").rstrip().split(",")))
-            print(f"\nFRONT:: {frontDist}\nRIGHT:: {rightDist}\nLEFT:: {leftDist}\n")
+            # print(f"\nFRONT:: {frontDist}\nRIGHT:: {rightDist}\nLEFT:: {leftDist}\n")
 
 
 def mpu_loop(mpu: MPU):
@@ -38,11 +38,14 @@ def mpu_loop(mpu: MPU):
     while True:
         try:
             mpu.currentAngle = mpu.compFilter(1) + ((3 * new_J) * motors.direction)
-            sleep(0.0000065)
+            # mpu.currentAngle = mpu.compFilter(1)
+            sleep(0.000007)
         except:
+            
             pass
 
 def get_color(event: Event):
+    global leftDist, rightDist
     motors.direction = 0
     while not event.is_set():
         orange = color_reco.detect_color("orange")
@@ -51,12 +54,7 @@ def get_color(event: Event):
             motors.direction = -1
         elif blue != (-1, -1):
             motors.direction = 1
-        else:
-            if leftDist - rightDist > 82:
-                motors.direction = 1
-            elif rightDist - leftDist > 82:
-                motors.direction = -1
-        
+
         if motors.direction != 0:
             event.set()
             color_reco.stop = True
@@ -72,8 +70,9 @@ def starting_point_adjustment():
         sleep(1)
     elif frontDist > 145:
         while (frontDist > 145 or frontDist == 0):
+            pass
         # motors.adjust_angle(heading, mpu.currentAngle, rightDist, leftDist)
-            print("adjusting")
+            # print("adjusting")
     print("out")
 
     motors.stop_car()
@@ -87,13 +86,14 @@ def moveUntilDist():
     motors.move_forward()
 
     motors.minfo(f"\n\nFRONT:: {frontDist}\n\n")
-    while (frontDist > 75 or frontDist == 0):
-        # if frontDist < 100 and motors.speed > 0.6:
-        #     motors.speed = 0.78
-        #     motors.move_forward()
+    while True:
+        if frontDist < 100 and frontDist > 80 and motors.speed > 0.6:
+            motors.speed = 0.74
+            motors.move_forward()
 
             # print(f"Moving with speed {motors.speed}  --- front {frontDist}")
-            
+        if (frontDist < 80 and frontDist != 0):
+            break
         motors.adjust_angle(heading, mpu.currentAngle, rightDist, leftDist)
         
         motors.minfo(
@@ -111,15 +111,16 @@ def turn():
     mpu.nextAngle = motors.get_next_angle(heading, True)
     motors.direction_turn()
     sleep(0.003)
+     
     motors.move_forward(1)
 
     mpu.dinfo(
         f"ABOVE:: ({mpu.currentAngle} - {mpu.nextAngle}) * {motors.direction} = {(mpu.nextAngle - mpu.currentAngle) * motors.direction}")
-
+    
     while not (250 > (mpu.currentAngle - mpu.nextAngle) * motors.direction >= -5):
         mpu.dinfo(
             f"({mpu.currentAngle} - {mpu.nextAngle}) * {motors.direction} = {(mpu.nextAngle - mpu.currentAngle) * motors.direction}")
-        sleep(0.00007)
+        sleep(0.00005)
         
 
     mpu.dinfo(
@@ -127,13 +128,15 @@ def turn():
 
     motors.turn_forward()
     motors.stop_car()
-
+    sleep(0.36)
 
 def main():
     global new_J
+    start_sleep = 0.44
 
     motors.turn_forward()
-
+    motors.speed = 0.45
+    
     color_event = Event()
     dist_event = Event()
 
@@ -144,17 +147,18 @@ def main():
     Thread(target=get_color, args=(color_event, )).start()
     Thread(target=read_distance, args=(dist_event, )).start()
 
-    while not btn.is_active:
-        sleep(0.1)
+    # while not btn.is_active:
+    #     sleep(0.1)
 
     while motors.turns < 3:
         moveUntilDist()
-        sleep(0.05)
+        sleep(start_sleep)
         turn()
         motors.get_current_turn(mpu.currentAngle)
         sleep(0.1)
         print(f"Turns: {motors.turns}")
         new_J = new_J + 1
+        start_sleep = 0
     
     print("Finishing")
     starting_point_adjustment()
@@ -171,8 +175,9 @@ if __name__ == '__main__':
 
     debugList = [False, False]
 
-    motors = mctrl(motorPins=[24, 13], servoPin=12, speed=1, debug=debugList[0])
+    motors = mctrl(motorPins=[13, 24], servoPin=12, speed=1, debug=debugList[0])
     mpu = MPU(gyro=250, acc=2, tau=0.98, debug=debugList[1])
+    enc = Encoder(15)
 
     color_reco = ColorsCoordinations().start()
     btn = Button(20)

@@ -81,7 +81,14 @@ class mctrl():
 
     def adjust_angle(self, heading: Union[int, float], reading: Union[int, float], right_distance: Union[int, float], left_distance: Union[int, float]):
 
-        distance_error = self.distance_threshold - left_distance
+
+        if right_distance == 0:
+            right_distance = 200
+        if left_distance == 0:
+            left_distance = 200
+        
+        distance_error = min(right_distance, 40) - min(left_distance, 40)
+        
     
         error_val = reading - heading + distance_error
         error_val = ((error_val + 180) % 360) - 180

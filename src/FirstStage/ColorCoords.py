@@ -23,9 +23,6 @@ class ColorsCoordinations:
         self.stream.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
         self.stream.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
 
-        self.crop_height = CROP_HEIGHT
-        self.crop_width = CROP_WIDTH
-
         self.frame = None
         self.__stop = False
 
@@ -39,15 +36,18 @@ class ColorsCoordinations:
     def stop(self, val: bool):
         self.__stop = val
 
-    def __cropped_frame(self, iFrame):
+    def __cropped_frame(self, iFrame, crop_width = CROP_WIDTH, crop_height = CROP_HEIGHT):
         height, width, _ = iFrame.shape
-        right_crop = width - self.crop_width
-        top_crop = iFrame[self.crop_height: height, :]
-        return top_crop[:, self.crop_width: top_crop.shape[1] - self.crop_width]
+        right_crop = width - crop_width
+        top_crop = iFrame[crop_height: height, :]
+        return top_crop[:, crop_width: top_crop.shape[1] - crop_width]
 
     def __crop_top(self, iFrame):
         height, width, _ = iFrame.shape
         return iFrame[self.crop_height: height, :]
+    
+    def crop(self, frame, width, height):
+        return self.__cropped_frame(frame, width, height)
 
     def __segment_frame(self, frame, lower: np.ndarray, upper: np.ndarray):
         kernel = np.ones((5, 5), "uint8")
@@ -145,7 +145,12 @@ if __name__ == "__main__":
     sleep(2)
 
     while True:
-        x = image.detect_color("green")
-        print(x)
+        x = image.detect_color("orange")
+        # print(x)
+        croped = image.crop(image.read(), 85 ,145)
+        cv2.imshow("Frame", croped)
+        
+        if cv2.waitKey(1) & 0xFF == ord("q"):
+            break
     cv2.destroyAllWindows()
     image.stop = True

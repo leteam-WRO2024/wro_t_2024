@@ -69,7 +69,7 @@ class MPU:
         if self.debug:
             print(value)
 
-    def get_next_angle(self, angle: Union[int, float], direction: int = 0,ninety_deg: bool = False):
+    def get_next_angle(self, angle: Union[int, float], direction: int = 0, ninety_deg: bool = False):
         next_angle = ((angle + 10) + (direction * 90)) % 360
         if ninety_deg:
             next_angle = (round(next_angle / 90)) * 90
@@ -218,14 +218,17 @@ def loop(mpu: MPU):
 
 
 if __name__ == '__main__':
+    from motor_ctrl import mctrl
     mpu = MPU(gyro=250, acc=2, tau=0.98, debug=True)
-
+    motor = mctrl([13, 24], 12)
     calThread = threading.Thread(target=loop, args=(mpu, )).start()
 
     if mpu.isReady():
         while True:
-            mpu.nextAngle = mpu.get_next_angle(mpu.currentAngle, -1,True)
-            print(mpu.currentAngle, mpu.nextAngle)
+            next_angle = mpu.get_next_angle(mpu.currentAngle, -1,True)
+            current_angle = motor.get_heading_angle(mpu.currentAngle)
+            current_turn = motor.get_current_turn(mpu.currentAngle)
+            print(current_angle, next_angle, motor.turns)
             sleep(1)
 
     print("Closing")
