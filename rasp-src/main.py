@@ -1,7 +1,9 @@
 from Color_Detection import ColorDetectionThread, ColorsCoordinations
-from time import sleep
+from time import sleep, time
 import serial
 from global_vals import FRAME_CENTER, FRAME_WIDTH
+from threading import Thread
+
 
 def calculate_pillar_error(coords, sign: int = 1):
     error = 0
@@ -18,23 +20,41 @@ def calculate_pillar_error(coords, sign: int = 1):
     return error
 
 def hanlde_blue(coords, timestamp):
-    global blue_counter, blue_time, stop_flag
-    blue_time = timestamp
+    global blue_counter, blue_time, stop_flag, turn_flag
     blue_counter += 1
     
+    if (time() - blue_time) > 1:
+        turn_flag = True
+        serial_message += f"t:{str(turn_flag).lower()}\n"
+    else:
+        turn_flag = False
+
     if blue_counter >= 11:
         stop_flag = True
         serial_message += f"s:{str(stop_flag).lower()}\n"
+    else:
+        stop_flag = False
+    
+    blue_time = timestamp
+
 
 def handle_orange(coords, timestamp):
     global orange_counter, orange_time, stop_flag
-    orange_time = timestamp
     orange_counter += 1
     
+    if (time() - orange_time) > 1:
+        turn_flag = True
+        serial_message += f"t:{str(turn_flag).lower()}\n"
+    else:
+        turn_flag = False
+
     if orange_counter >= 11:
         stop_flag = True
         serial_message += f"s:{str(stop_flag).lower()}\n"
+    else:
+        stop_flag = False
 
+    orange_time = timestamp
 
 def handle_green(coords, timestamp):
     global green_time, serial_message
@@ -57,19 +77,40 @@ def handle_colors(color, values):
     handler = color_handles.get(color)
     handler(coords, timestamp)
 
-def main():
-    while True:
-        frame = frame_provider.read()
-        if frame is None:
-            continue
 
+def update_results(threads: list):
+    global results
+    while True:
         for thread in threads:
             if hasattr(thread.local_storage, "result"):
                 results.update(thread.color, thread.local_storage.result)
-            
+
+def main():
+    loop_counter = 0
+    direction_sent = False
+    while True:
+        loop_counter += 1
+        # frame = frame_provider.read()
+        # if frame is None:
+        #     continue
+
+        if not bool(results):
+            continue
+        
         for color, values in results.items():
             handle_colors(color, values)
         
+        if direction == 0:
+            if (orange_time - blue_time) < 0: # orange was read first
+                direction = -1 # clock wise
+            elif (orange_time - blue_time) > 0:
+                direction = 1 # counter clock wise
+            else:
+                direction = 0
+        else:
+            if not direction_sent:
+                serial_message += f"d:{direction}"
+
         if serial_message:
             ser.write(serial_message.encode("utf-8"))
             serial_message = ""
@@ -100,6 +141,8 @@ if __name__ == "__main__":
     sleep(2)
 
     ## FLAGS, TIMES, MAIN VARS
+    direction   = 0
+
     blue_time   = 0
     orange_time = 0
     red_time    = 0
@@ -109,6 +152,7 @@ if __name__ == "__main__":
     blue_counter   = 0
 
     stop_flag = False
+    turn_flag  = False
 
     # Last message to sen to arduino
     serial_message = ""
@@ -118,5 +162,12 @@ if __name__ == "__main__":
         cthread.daemon = True
         cthread.start()
         threads.append(cthread)
+        sleep(0.5)
+
+    results_thread = Thread(target = update_results, args = (threads, ))
+    results_thread.daemon = True
+    results_thread.start()
+
+    sleep(1)
 
     main()
