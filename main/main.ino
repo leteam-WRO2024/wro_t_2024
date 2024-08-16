@@ -22,7 +22,7 @@ PID pid_c(0.6, 0.0, 0.03); // initializing pid Controller for left and right dis
 
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(57600);
   MOTORS.init_pins();
   MOTORS.stop_motor();
   MOTORS.turn_forward();
