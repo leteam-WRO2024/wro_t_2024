@@ -3,30 +3,34 @@
 #include <pid.h>
 #include <Arduino.h>
 
+// PINS
 const uint8_t motor_pins_d[3] = {3, 7, 8};
 const uint8_t servo_pin_d     = 10;
 
 // servo intervals
 unsigned long servoMillis = 0;
+const unsigned long servoInterval = 10; // 0.01 second
 
 // turn intervals
 unsigned long turnStartMillis = 0;
-const unsigned long turnInterval = 800; // 0.8 second 
+const unsigned long turnInterval = 1000; // 1 second 
 
-bool debug = false;
 
 // vars
 double correction = 0;
 float error = 0;
+float pillar_error = 0.0;
 short base_angle = 90;
 short new_angle = 90;
+bool debug = false;
+
 enum State { TURNING, MOVING };
 State state = MOVING; 
 
-// Flags & Serial Vars
+// Flags 
 bool turn_flag = false;
 bool stop_flag = false;
-double pillar_error = 0.0;
+
 // Create instances for ultrasonci sensors
 DistanceClass frontDistance(13, 12, 0, 2);
 DistanceClass rightDistance(5, 4, 0, 1);   
@@ -48,7 +52,11 @@ void setup() {
 
 void loop() {
   unsigned long currentMillis = millis();
-  MOTORS.move_forward(200);
+  if (!stop_flag) {
+    MOTORS.move_forward(200);
+  } else {
+    handle_finishing(); // function because we might need to add final adjustments to make the robot stop from where it started
+  }
 
   frontDistance.read_sensor();  // Update the sensor readings and state
   rightDistance.read_sensor();
@@ -78,21 +86,21 @@ void loop() {
       break;
 
     case MOVING:
-      error = pillar_error;
-      if (error == 0) {
+      if (pillar_error == 0) { // if there is no pillars e.g (red or green pillar) adjust based on distance from walls
         error = rightDist - leftDist;
         correction = distance_pid.compute(error);
-      } else {
+      } else { // if there is pillars e.g (red or green pillar) adjust based on the pillar error
+        error = pillar_error; 
         correction = color_pid.compute(error);
       };
-      base_angle = MOTORS.get_default_angle(1);
+      base_angle = MOTORS.get_default_angle(1); // in both cases we are still moving forward so the error adjustment is on the mid angle of the servo
       break;
   }
 
   new_angle = base_angle + correction;
   
-  // Servo angle editing
-  if (currentMillis - servoMillis > 10) {
+  // Servo angle adjustment
+  if (currentMillis - servoMillis > servoInterval) {
     MOTORS.set_servo_angle(new_angle);
     servoMillis = currentMillis; 
   }
@@ -135,6 +143,6 @@ void process_serial() {
 
 
 void handle_finishing() {
+  // do other stuff before stopping maybe adjusting to the section where the robot started etc ...
   MOTORS.stop_motor();
 }
-
