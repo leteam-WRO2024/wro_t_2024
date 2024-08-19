@@ -7,6 +7,7 @@ from threading import Thread, Event
 from ColorCoords import ColorsCoordinations
 import cv2
 import numpy as np
+from encoder import Encoder
 
 new_J = 0
 
@@ -20,6 +21,8 @@ def read_distance(event: Event):
         if ser.in_waiting > 0:
             frontDist, rightDist, leftDist = list(
                 map(float, ser.readline().decode("utf-8").rstrip().split(",")))
+            # print(f"\nFRONT:: {frontDist}\nRIGHT:: {rightDist}\nLEFT:: {leftDist}\n")
+            
             
 def mpu_loop(mpu: MPU):
     global new_J
@@ -35,25 +38,31 @@ def mpu_loop(mpu: MPU):
 
 
 def get_color(event: Event):
-    global green_center, red_center
+    global green_center, red_center, turn_bool
     motors.direction = 0
 
     while True:
+        orange = color_reco.detect_color("orange")
+        blue = color_reco.detect_color("blue")
         if not event.is_set():
-            orange = color_reco.detect_color("orange")
-            blue = color_reco.detect_color("blue")
             if orange != (-1, -1):
                 motors.direction = -1
             elif blue != (-1, -1):
                 motors.direction = 1
-            else:
-                if leftDist - rightDist > 83:
-                    motors.direction = 1
-                elif rightDist - leftDist > 83:
-                    motors.direction = -1
+            # else:
+            #     if leftDist - rightDist > 83:
+            #         motors.direction = 1
+            #     elif rightDist - leftDist > 83:
+            #         motors.direction = -1
 
-        if motors.direction != 0:
+        if motors.direction != 0 and not event.is_set():
             event.set()
+        
+        if orange != (-1, -1):
+            turn_bool = True
+        elif blue != (-1, -1):
+            turn_bool = True
+
 
         green_center = color_reco.detect_color("green")
         red_center = color_reco.detect_color("red")
@@ -74,6 +83,7 @@ def starting_point_adjustment():
 
 
 def moveUntilDist():
+    global turn_bool
     heading = motors.get_heading_angle(mpu.currentAngle)
 
     motors.move_forward()
@@ -83,28 +93,36 @@ def moveUntilDist():
         if green_center[2] != -1:
             motors.color_based_adjustment(heading, mpu.currentAngle, green_center, 1, leftDist, rightDist)
         elif red_center[2] != -1:
-            motors.color_based_adjustment(heading, mpu.currentAngle, red_center, -1, leftDist, rightDist)
+            motors.color_based_adjustment(heading, mpu.currentAngle, red_center, 1, leftDist, rightDist)
             motors.minfo(
                 f"\nFRONT:: {frontDist}\nRIGHT:: {rightDist}\nLEFT:: {leftDist}\n")
         else:
-            if (frontDist > 80 or frontDist == 0) or (rightDist < 100 and leftDist < 100):
-                motors.color_based_adjustment(heading, mpu.currentAngle, green_center, 0, leftDist, rightDist)
+            if turn_bool and frontDist < 70:
+                if new_J == 0:
+                    break
+                else:
+                    if (enc.displacement - last_displace) > 45:
+                        break
+                    else:
+                        motors.color_based_adjustment(heading, mpu.currentAngle, (-1, -1, -1, -1, -1, -1), -1, leftDist, rightDist)
             else:
-                break
-        
+                motors.color_based_adjustment(heading, mpu.currentAngle, (-1, -1, -1, -1, -1, -1), -1, leftDist, rightDist)
+            
+            
     motors.turn_forward()
     motors.stop_car()
-    motors.speed = 1
+    motors.speed = 0.75
     print("OUT OF LOOP")
 
 
 def turn():
+    global last_displace, turn_bool
     heading = motors.get_heading_angle(mpu.currentAngle)
 
     mpu.nextAngle = motors.get_next_angle(heading, True)
     motors.direction_turn()
     sleep(0.003)
-    motors.move_forward(1)
+    motors.move_forward(0.8)
 
     mpu.dinfo(
         f"ABOVE:: ({mpu.currentAngle} - {mpu.nextAngle}) * {motors.direction} = {(mpu.nextAngle - mpu.currentAngle) * motors.direction}")
@@ -120,9 +138,11 @@ def turn():
     motors.move_backward(0.7)
     while not (10 > ((mpu.currentAngle - motors.get_heading_angle(mpu.nextAngle)) * motors.direction) > -20):
         sleep(0.0001)
+    last_displace = enc.displacement
+    turn_bool = False
     motors.turn_forward()
     motors.stop_car()
-    sleep(0.6)
+    sleep(0.5)
 
 
 def main():
@@ -131,14 +151,14 @@ def main():
     motors.max_angle = 150
     motors.min_angle = 50
     motors.mid_angle = 110
-    motors.speed = 1
+    motors.speed = 0.44
     motors.turn_forward()
 
     color_event = Event()
     dist_event = Event()
 
     Thread(target=mpu_loop, args=(mpu, )).start()
-
+ 
     ready = mpu.isReady()
 
     Thread(target=read_distance, args=(dist_event, )).start()
@@ -147,12 +167,12 @@ def main():
 
     # while not btn.is_active:
     #     sleep(0.1)
-
+    
     while motors.turns < 3:
         moveUntilDist()
+        sleep(0.4)
         turn()
         motors.get_current_turn(mpu.currentAngle)
-        sleep(0.1)
         new_J = new_J + 1
 
     # while True:
@@ -169,18 +189,25 @@ if __name__ == '__main__':
 
     green_center = (-1, -1, -1, -1, -1, -1)
     red_center = (-1, -1, -1, -1, -1, -1)
-
+    orange = (-1, -1)
+    blue   = (-1, -1)
+     
     new_J = 0
 
     frontDist = 0
     rightDist = 0
     leftDist = 0
 
+    turn_bool = False
+
     debugList = [False, False]
 
     motors = mctrl(motorPins=[24, 13], servoPin=12, speed=1, debug=debugList[0])
     mpu = MPU(gyro=250, acc=2, tau=0.98, debug=debugList[1])
 
+    enc = Encoder(15)
+    last_displace = 0
+    
     color_reco = ColorsCoordinations().start()
     btn = Button(20)
 

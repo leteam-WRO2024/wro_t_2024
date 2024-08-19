@@ -58,7 +58,7 @@ def get_color(event: Event):
         if motors.direction != 0:
             event.set()
             color_reco.stop = True
-        print(f"direction: {motors.direction}")
+        # print(f"direction: {motors.direction}")
 
 
 def starting_point_adjustment():
@@ -87,15 +87,11 @@ def moveUntilDist():
 
     motors.minfo(f"\n\nFRONT:: {frontDist}\n\n")
     while True:
-        if frontDist < 100 and frontDist > 80 and motors.speed > 0.6:
-            motors.speed = 0.74
-            motors.move_forward()
-
             # print(f"Moving with speed {motors.speed}  --- front {frontDist}")
-        if (frontDist < 80 and frontDist != 0):
+        if (frontDist < 82 and frontDist != 0) or (leftDist > 120 or rightDist > 120):
             break
         motors.adjust_angle(heading, mpu.currentAngle, rightDist, leftDist)
-        
+                
         motors.minfo(
             f"\nFRONT:: {frontDist}\nRIGHT:: {rightDist}\nLEFT:: {leftDist}\n")
 
@@ -132,10 +128,10 @@ def turn():
 
 def main():
     global new_J
-    start_sleep = 0.44
+    # start_sleep = 0.44
 
     motors.turn_forward()
-    motors.speed = 0.45
+    motors.speed = 1
     
     color_event = Event()
     dist_event = Event()
@@ -152,13 +148,12 @@ def main():
 
     while motors.turns < 3:
         moveUntilDist()
-        sleep(start_sleep)
+        # sleep(start_sleep)
         turn()
         motors.get_current_turn(mpu.currentAngle)
         sleep(0.1)
-        print(f"Turns: {motors.turns}")
+        # print(f"Turns: {motors.turns}")
         new_J = new_J + 1
-        start_sleep = 0
     
     print("Finishing")
     starting_point_adjustment()
@@ -175,7 +170,7 @@ if __name__ == '__main__':
 
     debugList = [False, False]
 
-    motors = mctrl(motorPins=[13, 24], servoPin=12, speed=1, debug=debugList[0])
+    motors = mctrl(motorPins=[24, 13], servoPin=12, speed=1, debug=debugList[0])
     mpu = MPU(gyro=250, acc=2, tau=0.98, debug=debugList[1])
     enc = Encoder(15)
 

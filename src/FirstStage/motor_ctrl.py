@@ -25,8 +25,8 @@ class mctrl():
         self.__speed = speed
         self.__direction = 0
 
-        self.min_angle = 50
-        self.max_angle = 150
+        self.min_angle = 60
+        self.max_angle = 140
         self.mid_angle = 110
         
         self.turns = 0

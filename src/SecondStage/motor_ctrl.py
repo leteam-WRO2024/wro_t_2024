@@ -23,7 +23,7 @@ class mctrl():
         # self.pid = pidc(0.6, 0.038, 0.034, True)
 
         #-> old setpoint = 130
-        self.color_pidc = pidc(0.14, 0, 0.0005, 80, 70, False) 
+        self.color_pidc = pidc(0.21, 0, 0.005, 80, 70, False) 
         # self.color_pidc = pidc(0.1, 0, 0.1, 150, 40, True)
         
         self.turns = 0
@@ -32,7 +32,7 @@ class mctrl():
         self.__direction = 0
 
         self.min_angle = 50
-        self.max_angle = 150
+        self.max_angle = 140
         self.mid_angle = 110
         
         
@@ -68,14 +68,6 @@ class mctrl():
     def minfo(self, val):
         if self.debug:
             print(val)
-    
-    def smooth_transition(self, current_angle, target_angle, step=3):
-
-        if current_angle < target_angle:
-            return min(current_angle + step, target_angle)
-        elif current_angle > target_angle:
-            return max(current_angle - step, target_angle)
-        return current_angle
 
     def get_next_angle(self, angle: Union[int, float], ninety_deg: bool = False):
         next_angle = ((angle + 10) + (self.direction * 90)) % 360
@@ -102,27 +94,45 @@ class mctrl():
 
         
         weight = w * h
-        center_away = abs(center_x_obj - FRAME_CENTER) / FRAME_WIDTH
-        error += weight_sign * (center_x_obj - FRAME_CENTER) * (1 - (center_away ** 2)) * weight
+        if weight_sign == 1:
+            if center_x_obj > (FRAME_CENTER - 40):
+                center_away = (FRAME_CENTER - 40) - center_x_obj
+            else:
+                center_away = center_x_obj - (FRAME_CENTER - 40)
+        else:
+            center_away = center_x_obj
+            
+        error = (center_away) * weight
         self.total_weight += weight
      
         # if self.total_weight != 0:
         #     error /= self.total_weight
 
-        error /= (FRAME_WIDTH * 1.37)
-        # print(f"Error before pidc: {error}")
-        error = self.color_pidc.calc_pid(error)
-        # print(error)
+        error /= (FRAME_WIDTH)
+        print(f"Error before pidc: {error}", end = " ,")
+        error = self.color_pidc.calc_pid(error) 
+        print(f"angle = {error}, weight = {weight}, center_away = {center_away}")
         return error
 
     def color_based_adjustment(self, heading: Union[float, int], reading: Union[float, int], color, weight_sign, left_dist, right_dist):
         error = self.calculate_weighted_error(color, weight_sign)     
-        
+
+        if error == 0:
+            if left_dist == 0:
+                left_dist = 200
+            if right_dist == 0:
+                right_dist = 200
+
+            left_dist = min(left_dist, 50)
+            right_dist = min(right_dist, 50)
+
+            error = 40 - left_dist
+
         angle_error = reading - heading
-        if left_dist < 15:
-            angle_error += 20
-        elif right_dist < 15:
-            angle_error -= 20
+        # if left_dist < 15:
+        #     angle_error += 20
+        # elif right_dist < 15:
+        #     angle_error -= 20
         
         angle_error = ((angle_error + 180) % 360) - 180
         angle_error = (angle_error + self.mid_angle) + error
@@ -181,3 +191,8 @@ class mctrl():
 
     def stop_car(self):
         self.motor.stop()
+
+if __name__ == "__main__":
+    
+    motors = mctrl(motorPins=[24, 13], servoPin=12, speed=1, debug=True)
+    motors.angle = motors.mid_angle
