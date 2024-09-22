@@ -1,4 +1,4 @@
-import serial
+from ultrasonic_ctrl import ultra
 from mpu_ctrl import MPU
 from encoder import Encoder
 from gpiozero import Button, LED
@@ -17,18 +17,11 @@ COLOR_RANGES = {
     "blue":     (np.array([90, 105, 90], np.uint8), np.array([125, 255, 255], np.uint8))
 }
 
-
-def read_distance(event: Event):
-    global frontDist, rightDist, leftDist
-    ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
-    ser.reset_input_buffer()
-
+def read_ultra(event: Event):
     while not event.is_set():
-        if ser.in_waiting > 0:
-            frontDist, rightDist, leftDist = list(
-                map(float, ser.readline().decode("utf-8").rstrip().split(",")))
-            # print(f"\nFRONT:: {frontDist}\nRIGHT:: {rightDist}\nLEFT:: {leftDist}\n")
-
+        frontUltra.distance = frontUltra.calcDistance()
+        leftUltra.distance = leftUltra.calcDistance()
+        rightUltra.distance = rightUltra.calcDistance()
 
 def mpu_loop(mpu: MPU):
     global new_J
@@ -45,7 +38,6 @@ def mpu_loop(mpu: MPU):
             pass
 
 def get_color(event: Event):
-    global leftDist, rightDist
     motors.direction = 0
     while not event.is_set():
         orange = color_reco.detect_color("orange")
@@ -66,12 +58,12 @@ def starting_point_adjustment():
     motors.move_forward(0.7)
 
 
-    if frontDist == 0:
+    if frontUltra == 0:
         sleep(1)
-    elif frontDist > 145:
-        while (frontDist > 145 or frontDist == 0):
+    elif frontUltra > 145:
+        while (frontUltra > 145 or frontUltra == 0):
             pass
-        # motors.adjust_angle(heading, mpu.currentAngle, rightDist, leftDist)
+        # motors.adjust_angle(heading, mpu.currentAngle, rightUltra, leftUltra)
             # print("adjusting")
     print("out")
 
@@ -81,19 +73,19 @@ def starting_point_adjustment():
 
 def moveUntilDist():
     heading = motors.get_heading_angle(mpu.currentAngle)
-    motors.adjust_angle(heading, mpu.currentAngle, rightDist, leftDist)
+    motors.adjust_angle(heading, mpu.currentAngle, rightUltra, leftUltra)
 
     motors.move_forward()
 
-    motors.minfo(f"\n\nFRONT:: {frontDist}\n\n")
+    motors.minfo(f"\n\nFRONT:: {frontUltra}\n\n")
     while True:
-            # print(f"Moving with speed {motors.speed}  --- front {frontDist}")
-        if (frontDist < 82 and frontDist != 0) or (leftDist > 120 or rightDist > 120):
+            # print(f"Moving with speed {motors.speed}  --- front {frontUltra}")
+        if (frontUltra < 82 and frontUltra != 0) or (leftUltra > 120 or rightUltra > 120):
             break
-        motors.adjust_angle(heading, mpu.currentAngle, rightDist, leftDist)
+        motors.adjust_angle(heading, mpu.currentAngle, rightUltra, leftUltra)
                 
         motors.minfo(
-            f"\nFRONT:: {frontDist}\nRIGHT:: {rightDist}\nLEFT:: {leftDist}\n")
+            f"\nFRONT:: {frontUltra}\nRIGHT:: {rightUltra}\nLEFT:: {leftUltra}\n")
 
     print("OUT OF LOOP")
     motors.turn_forward()
@@ -141,7 +133,7 @@ def main():
     ready = mpu.isReady()
 
     Thread(target=get_color, args=(color_event, )).start()
-    Thread(target=read_distance, args=(dist_event, )).start()
+    Thread(target=read_ultra, args=(dist_event, )).start()
 
     # while not btn.is_active:
     #     sleep(0.1)
@@ -164,9 +156,9 @@ def main():
 if __name__ == '__main__':
     new_J = 0
 
-    frontDist = 0
-    rightDist = 0
-    leftDist = 0
+    frontUltra = ultra(10, 26)
+    rightUltra = ultra(22, 16)
+    leftUltra  = ultra(9, 11)
 
     debugList = [False, False]
 

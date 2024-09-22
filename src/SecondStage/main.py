@@ -1,4 +1,4 @@
-import serial
+from ultrasonic_ctrl import ultra
 from mpu_ctrl import MPU
 from gpiozero import Button, LED
 from motor_ctrl import mctrl
@@ -12,17 +12,11 @@ from encoder import Encoder
 new_J = 0
 
 
-def read_distance(event: Event):
-    global frontDist, rightDist, leftDist
-    ser = serial.Serial('/dev/ttyUSB0', 9600, timeout=1)
-    ser.reset_input_buffer()
-
-    while not event.is_set():
-        if ser.in_waiting > 0:
-            frontDist, rightDist, leftDist = list(
-                map(float, ser.readline().decode("utf-8").rstrip().split(",")))
-            # print(f"\nFRONT:: {frontDist}\nRIGHT:: {rightDist}\nLEFT:: {leftDist}\n")
-            
+def read_ultra():
+    while True:
+        frontUltra.distance = frontUltra.calcDistance()
+        leftUltra.distance = leftUltra.calcDistance()
+        rightUltra.distance = rightUltra.calcDistance()
             
 def mpu_loop(mpu: MPU):
     global new_J
@@ -194,9 +188,10 @@ if __name__ == '__main__':
      
     new_J = 0
 
-    frontDist = 0
-    rightDist = 0
-    leftDist = 0
+    frontUltra = ultra(10, 26)
+    rightUltra = ultra(22, 16)
+    leftUltra  = ultra(9, 11)
+
 
     turn_bool = False
 
