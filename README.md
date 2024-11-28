@@ -85,6 +85,8 @@ After that we use the desired angle (the heading angle e.g 90, 180, 270, 360 or 
 
 we sum the values e.g if the distance error was negative then it helps go away from the right wall, otherwise if positive it helps go away from the left wall, while keeping the angle straight
 
+In the last code, we replaced the readings from ultrasonic sensors with the x values of the black color contours on the right and left sides of the cropped image.
+
 ## 3 LAPS detection
 
-As of now the robot only runs a for loop for each lap and a for loop inside of it for each corner, and runs the moving and turning functions inside, which works correctly but, we are aware its error prone.
+At first the robot only runs a for loop for each lap and a for loop inside of it for each corner, and runs the moving and turning functions inside, which works correctly but, we are aware its error prone, In the latest update, we handled each edge of the track with a dedicated function that identifies the end of the edge in the first round when it detects the black color in front of it. In the second round, it identifies the end by the color of the line on the floor, considering the possibility of seeing the black color on the sides while trying to avoid obstacles as the end of the path.
