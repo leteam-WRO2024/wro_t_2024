@@ -22,7 +22,7 @@ This repository contains engineering materials of "yatta-team" self-driven vehic
 | Main-Controller     | [RPI-5](https://www.raspberrypi.com/products/raspberry-pi-5/)                                                |
 | Secondry-Controller | [Arduino ATmega328p (Arduino Nano 3.x)](https://store.arduino.cc/products/arduino-nano)                              |
 | gyroscope           | [BNO085](https://www.ceva-ip.com/wp-content/uploads/2019/10/BNO080_085-Datasheet.pdf) |
-| Camera              | [rpi-camera](https://www.raspberrypi.com/products/camera-module-v2/)                                                 |
+| Camera              | [usb 170 degree fisheye cam](https://www.amazon.com/ALPCAM-Camera-Module-Webcam-Fisheye/dp/B07VVH39DC/)                                                 |
 | Other-Parts         | Ultrasonics, full-bridge, Voltage regulator, green-light, button                                                     |
 
 # Software
