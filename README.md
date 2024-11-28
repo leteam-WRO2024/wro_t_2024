@@ -19,7 +19,7 @@ This repository contains engineering materials of "yatta-team" self-driven vehic
 | ------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | Chasis              | [4WDRC Chassis S3003 Servo](https://www.elecrow.com/4wd-smart-car-robot-chassis-for-arduino-servo-steering.html)     |
 | Servo               | [S3003 FUTABA SERVO](https://www.es.co.th/schemetic/pdf/et-servo-s3003.pdf)                                          |
-| Main-Controller     | [RPI-4](https://www.raspberrypi.com/products/raspberry-pi-4-model-b/)                                                |
+| Main-Controller     | [RPI-5](https://www.raspberrypi.com/products/raspberry-pi-5/)                                                |
 | Secondry-Controller | [Arduino ATmega328p (Arduino Nano 3.x)](https://store.arduino.cc/products/arduino-nano)                              |
 | gyroscope           | [MPU6050](https://www.electronicwings.com/sensors-modules/mpu6050-gyroscope-accelerometer-temperature-sensor-module) |
 | Camera              | [rpi-camera](https://www.raspberrypi.com/products/camera-module-v2/)                                                 |
