@@ -21,7 +21,7 @@ This repository contains engineering materials of "yatta-team" self-driven vehic
 | Servo               | [S3003 FUTABA SERVO](https://www.es.co.th/schemetic/pdf/et-servo-s3003.pdf)                                          |
 | Main-Controller     | [RPI-5](https://www.raspberrypi.com/products/raspberry-pi-5/)                                                |
 | Secondry-Controller | [Arduino ATmega328p (Arduino Nano 3.x)](https://store.arduino.cc/products/arduino-nano)                              |
-| gyroscope           | [MPU6050](https://www.electronicwings.com/sensors-modules/mpu6050-gyroscope-accelerometer-temperature-sensor-module) |
+| gyroscope           | [BNO085](https://www.ceva-ip.com/wp-content/uploads/2019/10/BNO080_085-Datasheet.pdf) |
 | Camera              | [rpi-camera](https://www.raspberrypi.com/products/camera-module-v2/)                                                 |
 | Other-Parts         | Ultrasonics, full-bridge, Voltage regulator, green-light, button                                                     |
 
